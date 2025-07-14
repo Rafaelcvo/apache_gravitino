@@ -1,0 +1,77 @@
+services:
+  # Apache Gravitino com setup completo
+  gravitino:
+    image: apache/gravitino:latest
+    container_name: gravitino
+    ports:
+      - "8090:8090"   # Web UI
+      - "9001:9001"   # Iceberg REST API
+    environment:
+      # Configuração básica usando H2 (banco embarcado)
+      GRAVITINO_CONF_gravitino_server_webserver_host: "0.0.0.0"
+      GRAVITINO_CONF_gravitino_server_webserver_httpPort: "8090"
+      GRAVITINO_CONF_gravitino_auxService_iceberg_rest_enabled: "true"
+      GRAVITINO_CONF_gravitino_auxService_iceberg_rest_host: "0.0.0.0"
+      GRAVITINO_CONF_gravitino_auxService_iceberg_rest_httpPort: "9001"
+      # Usar H2 como banco padrão (sem necessidade de MySQL)
+      GRAVITINO_CONF_gravitino_entity_store: "kv"
+      GRAVITINO_CONF_gravitino_entity_serde: "proto"
+    volumes:
+      - ./gravitino-data:/opt/gravitino/data
+      - ./gravitino-logs:/opt/gravitino/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # PostgreSQL para exemplo de catálogo
+  postgres:
+    image: postgres:13
+    container_name: gravitino-postgres
+    environment:
+      POSTGRES_DB: demo_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+
+  # Trino para consultas federadas
+  trino:
+    image: trinodb/trino:latest
+    container_name: gravitino-trino
+    depends_on:
+      - gravitino
+      - postgres
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./trino-config:/etc/trino
+    restart: unless-stopped
+    environment:
+      TRINO_ENVIRONMENT: development
+
+  # MinIO para storage S3-compatível
+  minio:
+    image: minio/minio:latest
+    container_name: gravitino-minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9090"
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  minio-data:
