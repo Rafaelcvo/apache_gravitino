@@ -1,4 +1,4 @@
-# Apache Gravitino - Caso de Estudo
+# Apache Gravitino - Estudo de caso
 
 ## 📋 Visão Geral
 Este projeto contém um caso de estudo prático para aprender Apache Gravitino localmente. O exemplo simula um ambiente de data lakehouse para uma empresa fictícia "DataCorp" que precisa gerenciar dados de vendas vindos de diferentes fontes.
